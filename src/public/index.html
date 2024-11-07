@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React Component Builder</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .editor {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-4xl mx-auto p-6">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">React Component Builder</h1>
+            <p class="text-gray-600 mb-6">Paste your React component code below and click "Build" to get the compiled dist folder.</p>
+            
+            <div class="mb-6">
+                <textarea 
+                    id="componentCode" 
+                    class="editor w-full h-96 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    spellcheck="false"
+                >// Example component
+function ExampleComponent() {
+    return (
+        <div className="p-4">
+            <h2 className="text-xl font-bold">Hello World</h2>
+            <p>This is a sample component</p>
+        </div>
+    );
+}
+
+export default ExampleComponent;</textarea>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <button 
+                    onclick="buildComponent()" 
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                >
+                    Build Component
+                </button>
+                <div id="status" class="text-gray-600"></div>
+            </div>
+            
+            <div id="error" class="mt-4 text-red-600"></div>
+        </div>
+    </div>
+
+    <script>
+        async function buildComponent() {
+            const componentCode = document.getElementById('componentCode').value;
+            const errorDiv = document.getElementById('error');
+            const statusDiv = document.getElementById('status');
+            const buildButton = document.querySelector('button');
+            
+            errorDiv.textContent = '';
+            statusDiv.textContent = 'Building...';
+            buildButton.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:3000/api/build', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ componentCode })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Build failed');
+                }
+
+                statusDiv.textContent = 'Build successful! Downloading...';
+
+                // Handle the zip file download
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'dist.zip';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
+                statusDiv.textContent = 'Download complete!';
+                setTimeout(() => {
+                    statusDiv.textContent = '';
+                }, 3000);
+
+            } catch (error) {
+                errorDiv.textContent = `Error: ${error.message}`;
+                statusDiv.textContent = '';
+            } finally {
+                buildButton.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html> 

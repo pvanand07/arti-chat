@@ -7,12 +7,13 @@ import { dirname } from 'path';
 import archiver from 'archiver';
 import { createWriteStream } from 'fs';
 import fs from 'fs/promises';
+import { mkdir } from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 1001;
 
 app.use(cors());
 app.use(express.json());
@@ -96,6 +97,16 @@ app.get('/download/:deploymentId', async (req, res) => {
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'renderer', 'index.html'));
 });
+
+const deploymentsDir = path.join(__dirname, '../deployments');
+// Ensure deployments directory exists
+try {
+    await mkdir(deploymentsDir, { recursive: true });
+} catch (err) {
+    if (err.code !== 'EEXIST') {
+        console.error('Error creating deployments directory:', err);
+    }
+}
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

@@ -4,7 +4,9 @@ services:
     container_name: react-component-builder
     build: .
     ports:
-      - "5000:3000"
+      - "1001:1001"
+    volumes:
+      - ./deployments:/app/deployments
     deploy:
       resources:
         limits:

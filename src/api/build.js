@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import archiver from 'archiver';
 import { createWriteStream } from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -14,10 +15,19 @@ const __dirname = dirname(__filename);
 router.post('/build', async (req, res) => {
     try {
         const { componentCode } = req.body;
+        const deploymentId = uuidv4();
         
         if (!componentCode) {
             return res.status(400).json({ error: 'Component code is required' });
         }
+
+        // Create deployments directory if it doesn't exist
+        const deploymentsDir = path.join(__dirname, '../../deployments');
+        await fs.mkdir(deploymentsDir, { recursive: true });
+
+        // Create deployment-specific directory
+        const deploymentDir = path.join(deploymentsDir, deploymentId);
+        await fs.mkdir(deploymentDir, { recursive: true });
 
         // Save the component to components directory
         const componentPath = path.join(__dirname, '../components/UserComponent.jsx');
@@ -36,33 +46,34 @@ router.post('/build', async (req, res) => {
                 else resolve(stdout);
             });
         });
+
+        // Copy all contents from dist to deployment directory
+        const distDir = path.join(__dirname, '../../dist');
+        await fs.cp(distDir, deploymentDir, { recursive: true });
+
+        // Update asset paths in index.html to be relative
+        const indexPath = path.join(deploymentDir, 'index.html');
+        let indexContent = await fs.readFile(indexPath, 'utf-8');
         
-        // Create zip file
-        const zipPath = path.join(__dirname, '../../dist.zip');
-        const output = createWriteStream(zipPath);
-        const archive = archiver('zip', {
-            zlib: { level: 9 }
+        // Update paths to be relative
+        indexContent = indexContent.replace(/src="\/assets\//g, 'src="assets/');
+        indexContent = indexContent.replace(/href="\/assets\//g, 'href="assets/');
+        
+        await fs.writeFile(indexPath, indexContent);
+
+        res.json({
+            success: true,
+            deploymentId,
+            deploymentUrl: `/d/${deploymentId}`,
+            downloadUrl: `/download/${deploymentId}`
         });
 
-        output.on('close', () => {
-            res.download(zipPath, 'dist.zip', async (err) => {
-                // Cleanup files after sending
-                try {
-                    await fs.unlink(zipPath);
-                    await fs.unlink(componentPath);
-                } catch (cleanupError) {
-                    console.error('Cleanup error:', cleanupError);
-                }
-            });
-        });
-
-        archive.on('error', (err) => {
-            throw err;
-        });
-
-        archive.pipe(output);
-        archive.directory(path.join(__dirname, '../../dist/'), 'dist');
-        await archive.finalize();
+        // Cleanup temporary files
+        try {
+            await fs.unlink(componentPath);
+        } catch (cleanupError) {
+            console.error('Cleanup error:', cleanupError);
+        }
         
     } catch (error) {
         console.error('Build failed:', error);
@@ -77,12 +88,10 @@ function generateAppCode(componentName) {
 
         function App() {
             return (
-                <div className="container mx-auto px-4 py-8">
-                    <div className="flex flex-col gap-4">
-                        <main className="border rounded-lg p-4 bg-white min-h-[600px]">
-                            <${componentName} />
-                        </main>
-                    </div>
+                <div className="w-screen h-screen">
+                    <main className="w-full h-full bg-white">
+                        <${componentName} />
+                    </main>
                 </div>
             )
         }

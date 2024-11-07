@@ -9,20 +9,40 @@
         .editor {
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
         }
+        /* Add transition for smooth view switching */
+        .view-transition {
+            transition: opacity 0.3s ease-in-out;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
     <div class="max-w-4xl mx-auto p-6">
         <div class="bg-white rounded-lg shadow-lg p-6">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">React Component Builder</h1>
-            <p class="text-gray-600 mb-6">Paste your React component code below and click "Build" to get the compiled dist folder.</p>
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">React Component Builder</h1>
+                    <p class="text-gray-600">Paste your React component code below and click "Build" to get the compiled dist folder.</p>
+                </div>
+                
+                <!-- Add view switcher -->
+                <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-600">Code</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="viewToggle" class="sr-only peer" onchange="toggleView()">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                    <span class="text-sm text-gray-600">Preview</span>
+                </div>
+            </div>
             
-            <div class="mb-6">
-                <textarea 
-                    id="componentCode" 
-                    class="editor w-full h-96 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    spellcheck="false"
-                >// Example component
+            <!-- Code Editor View -->
+            <div id="editorView" class="view-transition">
+                <div class="mb-6">
+                    <textarea 
+                        id="componentCode" 
+                        class="editor w-full h-96 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        spellcheck="false"
+                    >// Example component
 function ExampleComponent() {
     return (
         <div className="p-4">
@@ -33,6 +53,18 @@ function ExampleComponent() {
 }
 
 export default ExampleComponent;</textarea>
+                </div>
+            </div>
+
+            <!-- Live Preview View -->
+            <div id="previewView" class="hidden view-transition">
+                <div class="border rounded-lg overflow-hidden bg-white mb-6">
+                    <iframe 
+                        id="previewFrame" 
+                        class="w-full h-[80vh] border-0"
+                        onload="adjustIframeHeight(this)"
+                    ></iframe>
+                </div>
             </div>
             
             <div class="flex items-center gap-4">
@@ -46,15 +78,41 @@ export default ExampleComponent;</textarea>
             </div>
             
             <div id="error" class="mt-4 text-red-600"></div>
+
+            <!-- Download section -->
+            <div id="downloadSection" class="mt-4 hidden">
+                <div class="flex gap-4">
+                    <a id="deploymentLink" target="_blank" class="text-blue-600 hover:text-blue-800 underline">Open in New Tab</a>
+                    <a id="downloadLink" class="text-blue-600 hover:text-blue-800 underline">Download ZIP</a>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
+        // Add view toggling functionality
+        function toggleView() {
+            const editorView = document.getElementById('editorView');
+            const previewView = document.getElementById('previewView');
+            const isPreviewMode = document.getElementById('viewToggle').checked;
+
+            if (isPreviewMode) {
+                editorView.classList.add('hidden');
+                previewView.classList.remove('hidden');
+            } else {
+                editorView.classList.remove('hidden');
+                previewView.classList.add('hidden');
+            }
+        }
+
         async function buildComponent() {
             const componentCode = document.getElementById('componentCode').value;
             const errorDiv = document.getElementById('error');
             const statusDiv = document.getElementById('status');
             const buildButton = document.querySelector('button');
+            const previewView = document.getElementById('previewView');
+            const downloadSection = document.getElementById('downloadSection');
+            const previewFrame = document.getElementById('previewFrame');
             
             errorDiv.textContent = '';
             statusDiv.textContent = 'Building...';
@@ -74,29 +132,46 @@ export default ExampleComponent;</textarea>
                     throw new Error(error.message || 'Build failed');
                 }
 
-                statusDiv.textContent = 'Build successful! Downloading...';
+                const result = await response.json();
+                statusDiv.textContent = 'Build successful!';
 
-                // Handle the zip file download
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'dist.zip';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
+                // Show preview and download sections
+                downloadSection.classList.remove('hidden');
+                
+                // Set iframe source
+                previewFrame.src = result.deploymentUrl;
 
-                statusDiv.textContent = 'Download complete!';
-                setTimeout(() => {
-                    statusDiv.textContent = '';
-                }, 3000);
+                // Update links
+                const deploymentLink = document.getElementById('deploymentLink');
+                const downloadLink = document.getElementById('downloadLink');
+                
+                deploymentLink.href = result.deploymentUrl;
+                downloadLink.href = result.downloadUrl;
+
+                // Switch to preview mode
+                document.getElementById('viewToggle').checked = true;
+                toggleView();
 
             } catch (error) {
                 errorDiv.textContent = `Error: ${error.message}`;
                 statusDiv.textContent = '';
             } finally {
                 buildButton.disabled = false;
+            }
+        }
+
+        // Add iframe height adjustment function
+        function adjustIframeHeight(iframe) {
+            try {
+                const height = Math.max(
+                    400,
+                    iframe.contentWindow.document.documentElement.scrollHeight,
+                    iframe.contentWindow.document.body.scrollHeight
+                );
+                iframe.style.height = height + 'px';
+            } catch (e) {
+                // If we can't access the iframe content (due to CORS), keep minimum height
+                console.warn('Could not adjust iframe height:', e);
             }
         }
     </script>

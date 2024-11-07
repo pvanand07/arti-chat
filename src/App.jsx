@@ -4,12 +4,10 @@
 
         function App() {
             return (
-                <div className="container mx-auto px-4 py-8">
-                    <div className="flex flex-col gap-4">
-                        <main className="border rounded-lg p-4 bg-white min-h-[600px]">
-                            <UserComponent />
-                        </main>
-                    </div>
+                <div className="w-screen h-screen">
+                    <main className="w-full h-full bg-white">
+                        <UserComponent />
+                    </main>
                 </div>
             )
         }

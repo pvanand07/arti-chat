@@ -1,6 +1,5 @@
 import React, { useMemo, memo } from 'react';
 import { Sandpack } from '@codesandbox/sandpack-react';
-import { removeNullishValues } from 'librechat-data-provider';
 import { SandpackPreview, SandpackProvider } from '@codesandbox/sandpack-react/unstyled';
 import type { SandpackPreviewRef } from '@codesandbox/sandpack-react/unstyled';
 import type { Artifact } from '~/common';
@@ -11,8 +10,8 @@ import {
   getTemplate,
   sharedOptions,
   getArtifactFilename,
-} from '~/utils/artifacts';
-import { getMermaidFiles } from '~/utils/mermaid';
+} from '~/components/utils/artifacts';
+import { getMermaidFiles } from '~/components/utils/mermaid';
 
 export const ArtifactPreview = memo(function ({
   showEditor = false,
@@ -77,3 +76,16 @@ export const ArtifactPreview = memo(function ({
     </SandpackProvider>
   );
 });
+
+export function removeNullishValues<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  const newObj: Partial<T> = { ...obj };
+
+  (Object.keys(newObj) as Array<keyof T>).forEach((key) => {
+    const value = newObj[key];
+    if (value === undefined || value === null) {
+      delete newObj[key];
+    }
+  });
+
+  return newObj;
+}

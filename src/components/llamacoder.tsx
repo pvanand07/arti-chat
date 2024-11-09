@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { LLMClient } from '../api/llm-client';
-import CodeViewer from './code-viewer';
+import { SandpackPreviewRef } from '@codesandbox/sandpack-react/unstyled';
+import { ArtifactPreview } from './Artifacts/ArtifactPreview';
 
 const LlamaCoder = () => {
   const [prompt, setPrompt] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const previewRef = useRef<SandpackPreviewRef | null>(null);
 
   // Initialize LLM client
   const llmClient = new LLMClient();
@@ -37,6 +39,12 @@ const LlamaCoder = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const artifact = {
+    type: 'react',
+    language: 'typescript',
+    content: generatedCode || undefined,
   };
 
   return (
@@ -72,9 +80,10 @@ const LlamaCoder = () => {
 
         {generatedCode && (
           <div className="border rounded-lg overflow-hidden">
-            <CodeViewer 
-              code={generatedCode}
+            <ArtifactPreview 
+              artifact={artifact}
               showEditor={true}
+              previewRef={previewRef}
             />
           </div>
         )}

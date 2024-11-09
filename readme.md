@@ -1,3 +1,8 @@
+# DEV LOGS
+librechat-data-provider needs to be build after installing from its directory
+
+FIX : src/generate.ts:417:39 - error TS18048: 'columns' is possibly 'undefined'.
+setting.columnSpan = Math.floor((columns ?? 1) / 2);
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

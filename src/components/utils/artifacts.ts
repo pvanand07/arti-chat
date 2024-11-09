@@ -1,5 +1,6 @@
 import dedent from 'dedent';
-import { ArtifactModes, shadcnComponents } from 'librechat-data-provider';
+import { ArtifactModes } from '../data/artifacts_data';
+import { shadcnComponents } from '../data/artifacts_data';
 import type {
   SandpackProviderProps,
   SandpackPredefinedTemplate,
@@ -24,17 +25,15 @@ export const getArtifactsMode = ({
   return ArtifactModes.DEFAULT;
 };
 
-const artifactFilename = {
+// Update the type definitions to be more strict
+type ArtifactType = 'application/vnd.mermaid' | 'application/vnd.react' | 'text/html' | 'application/vnd.code-html' | 'default';
+
+const artifactFilename: Record<ArtifactType, string> = {
   'application/vnd.mermaid': 'App.tsx',
   'application/vnd.react': 'App.tsx',
   'text/html': 'index.html',
   'application/vnd.code-html': 'index.html',
-  default: 'index.html',
-  // 'css': 'css',
-  // 'javascript': 'js',
-  // 'typescript': 'ts',
-  // 'jsx': 'jsx',
-  // 'tsx': 'tsx',
+  'default': 'index.html',
 };
 
 const artifactTemplate: Record<
@@ -79,12 +78,12 @@ export function getKey(type: string, language?: string): string {
 }
 
 export function getArtifactFilename(type: string, language?: string): string {
-  const key = getKey(type, language);
+  const key = getKey(type, language) as ArtifactType;
   return artifactFilename[key] ?? artifactFilename.default;
 }
 
 export function getTemplate(type: string, language?: string): SandpackPredefinedTemplate {
-  const key = getKey(type, language);
+  const key = getKey(type, language) as ArtifactType;
   return artifactTemplate[key] ?? (artifactTemplate.default as SandpackPredefinedTemplate);
 }
 
@@ -137,16 +136,17 @@ const mermaidDependencies = Object.assign(
   standardDependencies,
 );
 
-const dependenciesMap: Record<keyof typeof artifactFilename, object> = {
+const dependenciesMap: Record<ArtifactType, Record<string, string>> = {
   'application/vnd.mermaid': mermaidDependencies,
   'application/vnd.react': standardDependencies,
   'text/html': standardDependencies,
   'application/vnd.code-html': standardDependencies,
-  default: standardDependencies,
+  'default': standardDependencies,
 };
 
 export function getDependencies(type: string): Record<string, string> {
-  return dependenciesMap[type] ?? standardDependencies;
+  const key = type as ArtifactType;
+  return dependenciesMap[key] ?? standardDependencies;
 }
 
 export function getProps(type: string): Partial<SandpackProviderProps> {
@@ -216,22 +216,3 @@ export const sharedFiles = {
   `,
 };
 
-export function preprocessCodeArtifacts(text?: string): string {
-  if (typeof text !== 'string') {
-    return '';
-  }
-
-  // Remove <thinking> tags and their content
-  text = text.replace(/<thinking>[\s\S]*?<\/thinking>|<thinking>[\s\S]*/g, '');
-
-  // Process artifact headers
-  const regex = /(^|\n)(:::artifact[\s\S]*?(?:```[\s\S]*?```|$))/g;
-  return text.replace(regex, (match, newline, artifactBlock) => {
-    if (artifactBlock.includes('```') === true) {
-      // Keep artifact headers with code blocks (empty or not)
-      return newline + artifactBlock;
-    }
-    // Remove artifact headers without code blocks, but keep the newline
-    return newline;
-  });
-}

@@ -1,16 +1,15 @@
+import { useState, useEffect } from 'react'
+import ChatBot from './components/ChatBot.jsx'
 
-        import { useState, useEffect } from 'react'
-        import UserComponent from './components/UserComponent.jsx'
+function App() {
+    return (
+        <div className="w-screen h-screen bg-gray-50">
+            <main className="w-full h-full">
+                <ChatBot />
+            </main>
+        </div>
+    )
+}
 
-        function App() {
-            return (
-                <div className="w-screen h-screen">
-                    <main className="w-full h-full bg-white">
-                        <UserComponent />
-                    </main>
-                </div>
-            )
-        }
-
-        export default App
+export default App
     
